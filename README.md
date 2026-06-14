@@ -24,9 +24,7 @@ A lightweight Neovim plugin manager built on top of the built-in [`vim.pack`](ht
 Add `mintpack` as a regular plugin. For example, with `vim.pack` directly in your `init.lua`:
 
 ```lua
-vim.pack.add({
-  src = "https://github.com/m1nts02/mintpack",
-})
+vim.pack.add({{ src = "https://github.com/m1nts02/mintpack" }}, { confirm = false })
 require("mintpack").setup()
 ```
 
