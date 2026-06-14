@@ -25,16 +25,9 @@ Add `mintpack` as a regular plugin. For example, with `vim.pack` directly in you
 
 ```lua
 vim.pack.add({
-  src = "https://github.com/m1nts02/mintpack.nvim",
+  src = "https://github.com/m1nts02/mintpack",
 })
 require("mintpack").setup()
-```
-
-Or clone this repository into your `packpath` manually:
-
-```bash
-git clone https://github.com/m1nts02/mintpack.nvim \
-  ~/.config/nvim/pack/mintpack/start/mintpack.nvim
 ```
 
 ## Quick Start
