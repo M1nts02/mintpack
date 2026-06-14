@@ -1,0 +1,297 @@
+*mintpack.txt*        A lightweight Neovim plugin manager built on vim.pack
+
+==============================================================================
+CONTENTS                                                    *mintpack-contents*
+
+  1. Introduction ...................... |mintpack-introduction|
+  2. Features .......................... |mintpack-features|
+  3. Requirements ...................... |mintpack-requirements|
+  4. Installation ...................... |mintpack-installation|
+  5. Quick Start ....................... |mintpack-quickstart|
+  6. Configuration ..................... |mintpack-config|
+  7. API ............................... |mintpack-api|
+  8. Plugin Spec ....................... |mintpack-spec|
+  9. Commands .......................... |mintpack-commands|
+ 10. Examples .......................... |mintpack-examples|
+ 11. How It Works ...................... |mintpack-how-it-works|
+
+==============================================================================
+1. INTRODUCTION                                         *mintpack-introduction*
+
+mintpack is a lightweight Neovim plugin manager built on top of the built-in
+|vim.pack| API. It keeps the simplicity of vim.pack while adding a declarative
+spec format, lazy-like `config` / `init` / `build` hooks, dependency handling,
+and convenient user commands.
+
+==============================================================================
+2. FEATURES                                                 *mintpack-features*
+
+- Tiny and transparent — thin wrapper around |vim.pack|, no external deps.
+- Declarative specs — register plugins with a clean table-based API.
+- Auto-install on startup — plugins are installed and loaded after |VimEnter|.
+- Config hooks with priority — run setup code after plugins are loaded.
+- Build hooks — run shell commands, Ex commands, or Lua functions on
+  install/update only.
+- Dependency support — register dependencies alongside a plugin.
+- Import from module paths — split your plugin list across files under `lua/`.
+- User commands — |:PackBuild|, |:PackClean|, |:PackUpdate|, |:PackStatus|.
+
+==============================================================================
+3. REQUIREMENTS                                         *mintpack-requirements*
+
+- Neovim 0.11+ or 0.12+ with the built-in |vim.pack| API.
+
+==============================================================================
+4. INSTALLATION                                         *mintpack-installation*
+
+Add mintpack as a regular plugin. For example, with |vim.pack.add()| directly
+in your `init.lua`:
+>
+  vim.pack.add({
+    src = "https://github.com/m1nts02/mintpack.nvim",
+  })
+  require("mintpack").setup()
+<
+Or clone this repository into your `packpath` manually:
+>
+  git clone https://github.com/m1nts02/mintpack.nvim \
+    ~/.config/nvim/pack/mintpack/start/mintpack.nvim
+<
+==============================================================================
+5. QUICK START                                               *mintpack-quickstart*
+>
+  local mintpack = require("mintpack")
+  local add = mintpack.add
+
+  mintpack.setup()
+
+  -- Short plugin names are expanded using the configured base URL.
+  add("nvim-lua/plenary.nvim")
+
+  -- Full table spec.
+  add({
+    "nvim-telescope/telescope.nvim",
+    dependencies = { "nvim-lua/plenary.nvim" },
+    config = function()
+      require("telescope").setup()
+    end,
+  })
+<
+Plugins are installed and configured automatically after startup.
+
+==============================================================================
+6. CONFIGURATION                                               *mintpack-config*
+
+|mintpack.setup()| accepts an optional configuration table.
+>
+  require("mintpack").setup({
+    -- Base URL for short plugin names. Must end with "/".
+    url = "https://github.com/",
+  })
+<
+                                                                  *mintpack.Config*
+Fields:
+  - `url` (`string`): Prefix used for short plugin names.
+    Default: `"https://github.com/"`.
+
+==============================================================================
+7. API                                                           *mintpack-api*
+
+                                                              *mintpack.setup()*
+mintpack.setup({opts})
+  Initialize mintpack. Applies configuration, registers user commands, and
+  sets up the |VimEnter| autocmd that installs, loads, and configures queued
+  plugins.
+
+                                                               *mintpack.add()*
+mintpack.add({spec})
+  Register one or more plugin specs. Accepted forms:
+>
+  add("user/repo")                              -- short string
+  add({ "user/repo", config = function() end }) -- single table spec
+  add({ { "user/a" }, { "user/b" } })           -- list of specs
+<
+                                                            *mintpack.import()*
+mintpack.import({paths})
+  Load plugin specs from Lua modules under `lua/<path>/`.
+>
+  mintpack.import("plugins")        -- loads lua/plugins/*.lua
+  mintpack.import({ "plugins", "colors" })
+<
+  Each file (or directory with an `init.lua`) is `require()`d and the returned
+  value is passed to |mintpack.add()|.
+
+==============================================================================
+8. PLUGIN SPEC                                                 *mintpack-spec*
+
+Fields:
+  - `[1]` / `src` (`string`): Plugin source. Short names are expanded with
+    `config.url`.
+  - `name` (`string?`): Override the derived plugin directory name.
+  - `version` (`string?`): Branch, tag, commit, or version range.
+  - `enabled` (`boolean?`): Set to `false` to skip this plugin.
+  - `priority` (`number?`): Config execution priority. Higher runs first.
+    Default: `50`.
+  - `init` (`function?`): Called immediately when the spec is registered.
+  - `config` (`function?`): Called after the plugin is installed and loaded.
+  - `build` (`function|string?`): Build hook. Runs only when a plugin is newly
+    installed or updated.
+  - `dependencies` (`table?`): List of plugin specs to register before this
+    plugin.
+  - `data` (`any?`): Arbitrary data forwarded to |vim.pack.add()|.
+
+Build formats:
+>
+  -- Lua function (sync, receives { name, path }).
+  build = function(ctx)
+    print("Building " .. ctx.name .. " at " .. ctx.path)
+  end
+
+  -- Ex command (the leading ":" is stripped).
+  build = ":TSUpdateSync"
+
+  -- Shell command run asynchronously via jobstart.
+  build = "!make"
+
+  -- Shell command run synchronously in the plugin directory.
+  build = "make"
+<
+==============================================================================
+9. COMMANDS                                                   *mintpack-commands*
+
+                                                                  *:PackBuild*
+:PackBuild [names...]
+  Run build hooks for the named plugins, or all plugins with build hooks if no
+  names are given.
+
+                                                                   *:PackClean*
+:PackClean
+  Delete plugins managed by |vim.pack| that are not active this session.
+
+                                                                  *:PackUpdate*
+:PackUpdate [names...]
+  Update all plugins, or only the named plugins.
+
+                                                                  *:PackStatus*
+:PackStatus [names...]
+  Show update status without downloading changes (offline).
+
+==============================================================================
+10. EXAMPLES                                                 *mintpack-examples*
+
+Basic plugin list:
+>
+  local mintpack = require("mintpack")
+  local add = mintpack.add
+
+  mintpack.setup()
+
+  add("nvim-lua/plenary.nvim")
+
+  add({
+    "saghen/blink.cmp",
+    version = "v1.10.2",
+    dependencies = {
+      "rafamadriz/friendly-snippets",
+      { "L3MON4D3/LuaSnip", build = "make install_jsregexp" },
+    },
+    config = function()
+      require("blink-cmp").setup({
+        keymap = { preset = "default" },
+        sources = { default = { "lsp", "path", "buffer" } },
+        completion = { documentation = { auto_show = true } },
+      })
+    end,
+  })
+<
+Split across files:
+>
+  -- init.lua
+  require("mintpack").setup()
+  require("mintpack").import("plugins")
+
+  -- lua/plugins/colorscheme.lua
+  return {
+    "catppuccin/nvim",
+    name = "catppuccin",
+    priority = 1000,
+    config = function()
+      require("catppuccin").setup({ term_colors = true })
+      vim.cmd.colorscheme("catppuccin-mocha")
+    end,
+  }
+
+  -- lua/plugins/avante.lua
+  return {
+    "yetone/avante.nvim",
+    build = "make",
+    dependencies = {
+      "nvim-lua/plenary.nvim",
+      "MunifTanjim/nui.nvim",
+      "nvim-mini/mini.nvim",
+      {
+        "HakonHarnes/img-clip.nvim",
+        config = function()
+          require("img-clip").setup({
+            default = {
+              embed_image_as_base64 = false,
+              prompt_for_file_name = false,
+              use_absolute_path = true,
+            },
+          })
+        end,
+      },
+      {
+        "MeanderingProgrammer/render-markdown.nvim",
+        config = function()
+          require("render-markdown").setup({ file_types = { "Avante" } })
+        end,
+      },
+    },
+    config = function()
+      require("avante").setup({ provider = "openai" })
+    end,
+  }
+
+  -- lua/plugins/treesitter.lua
+  return {
+    "neovim-treesitter/nvim-treesitter",
+    build = ":TSUpdate",
+    dependencies = { "neovim-treesitter/treesitter-parser-registry" },
+    config = function()
+      require("nvim-treesitter").setup({})
+    end,
+  }
+<
+Disabled plugin:
+>
+  add({
+    "some/plugin",
+    enabled = false,
+  })
+<
+Custom base URL:
+>
+  require("mintpack").setup({
+    url = "https://git.sr.ht/",
+  })
+
+  add("~user/neovim-plugin") -- resolves to https://git.sr.ht/~user/neovim-plugin
+<
+==============================================================================
+11. HOW IT WORKS                                         *mintpack-how-it-works*
+
+1. |mintpack.add()| collects plugin specs into an internal list.
+2. `init` callbacks run immediately as specs are registered.
+3. After |VimEnter|, |vim.pack.add()| installs/loads all queued plugins.
+   - If a download fails, the error is captured and shown via |vim.notify()|
+     without aborting startup.
+4. `build` hooks run only for plugins that were newly installed or updated in
+   this session.
+5. `config` callbacks run in priority order (highest first), but only for
+   plugins that were successfully loaded.
+
+mintpack listens to the |PackChanged| event to queue/run `build` hooks
+automatically when a plugin is installed or updated via |vim.pack|.
+
+ vim:tw=78:ts=2:sts=2:sw=2:ft=help:norl:
