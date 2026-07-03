@@ -59,14 +59,17 @@ add({
 require("mintpack").setup({
   -- Base URL for short plugin names. Must end with "/".
   url = "https://github.com/",
+  -- Register user commands (PackBuild, PackClean, PackUpdate, PackStatus).
+  commands = true,
 })
 ```
 
 ### Options
 
-| Option | Type     | Default                  | Description                          |
-| ------ | -------- | ------------------------ | ------------------------------------ |
-| `url`  | `string` | `"https://github.com/"` | Prefix used for short plugin names. |
+| Option     | Type      | Default                  | Description                                |
+| ---------- | --------- | ------------------------ | ------------------------------------------ |
+| `url`      | `string`  | `"https://github.com/"` | Prefix used for short plugin names.       |
+| `commands` | `boolean` | `true`                   | Register mintpack user commands on setup. |
 
 ## API
 

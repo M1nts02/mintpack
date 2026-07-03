@@ -13,8 +13,11 @@ M.import = add.import
 ---@param opts? mintpack.Config
 function M.setup(opts)
   config.setup(opts)
-  require "mintpack.command"
+  if config.get().commands then
+    require "mintpack.command"
+  end
   require "mintpack.autocmd"
 end
 
 return M
+
